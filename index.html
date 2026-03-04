@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌱 Soil Food Web Quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===== VARIABLES ===== */
+:root {
+  --bg:        #1a1a1a;
+  --surface:   #252525;
+  --card:      #2e2e2e;
+  --btn:       #383838;
+  --btn-hover: #424242;
+  --border:    #4a4a4a;
+  --accent:    #4CAF50;
+  --earth:     #8B6F47;
+  --text:      #f0f0f0;
+  --muted:     #999;
+  --correct:   #4CAF50;
+  --wrong:     #e53935;
+  --gold:      #FFD700;
+  --r: 10px;
+}
+
+/* ===== RESET ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  direction: rtl;
+}
+button { font-family: inherit; cursor: pointer; border: none; }
+
+/* ===== PROGRESS BAR (top) ===== */
+#top-bar {
+  position: fixed; top: 0; right: 0; left: 0;
+  height: 4px; background: #2a2a2a; z-index: 100;
+}
+#top-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--earth));
+  width: 0%;
+  transition: width 400ms ease-out;
+}
+
+/* ===== PARTICLES ===== */
+#particles {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+}
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0;
+  animation: drift linear infinite;
+}
+@keyframes drift {
+  0%   { transform: translateY(100vh) scale(0); opacity: 0; }
+  10%  { opacity: 0.4; }
+  90%  { opacity: 0.2; }
+  100% { transform: translateY(-20px) scale(1); opacity: 0; }
+}
+
+/* ===== SCREENS ===== */
+.screen {
+  display: none;
+  position: relative; z-index: 1;
+  min-height: 100vh;
+  padding: 60px 20px 40px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.screen.active { display: flex; }
+
+/* ===== FADE ANIMATION ===== */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.35s ease-out both; }
+
+/* ===== CONTAINER ===== */
+.container { width: 100%; max-width: 580px; }
+
+/* ===== START SCREEN ===== */
+.logo {
+  font-size: 52px; text-align: center; margin-bottom: 8px;
+  animation: pulse 3s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+.title {
+  text-align: center; font-size: 26px; font-weight: 700;
+  letter-spacing: 0.5px; margin-bottom: 6px;
+}
+.subtitle {
+  text-align: center; color: var(--muted); font-size: 15px;
+  margin-bottom: 40px; line-height: 1.6;
+}
+
+.level-grid {
+  display: grid; grid-template-columns: repeat(3,1fr);
+  gap: 14px; margin-bottom: 24px;
+}
+.level-card {
+  background: var(--card); border: 2px solid var(--border);
+  border-radius: var(--r); padding: 20px 12px;
+  text-align: center; cursor: pointer;
+  transition: all 200ms ease-out;
+}
+.level-card:hover { border-color: var(--accent); background: #363636; transform: translateY(-3px); }
+.level-card.selected { border-color: var(--accent); background: #2a3d2a; }
+.level-icon { font-size: 32px; margin-bottom: 8px; }
+.level-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.level-desc { font-size: 12px; color: var(--muted); line-height: 1.4; }
+
+.start-btn {
+  width: 100%; padding: 16px;
+  background: var(--accent); color: #111;
+  font-size: 17px; font-weight: 700;
+  border-radius: var(--r);
+  transition: all 150ms ease-out;
+  margin-bottom: 14px;
+}
+.start-btn:hover { background: #5dba61; transform: translateY(-2px); box-shadow: 0 4px 16px rgba(76,175,80,0.3); }
+.start-btn:disabled { background: #555; color: #888; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.secondary-btn {
+  width: 100%; padding: 13px;
+  background: var(--btn); color: var(--text);
+  font-size: 15px; font-weight: 500;
+  border-radius: var(--r); border: 1px solid var(--border);
+  transition: all 150ms ease-out; margin-bottom: 10px;
+}
+.secondary-btn:hover { background: var(--btn-hover); border-color: var(--earth); }
+
+/* ===== STATS BAR (quiz) ===== */
+#hud {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0 18px; font-size: 14px; font-weight: 600;
+}
+.hud-lives { display: flex; gap: 4px; font-size: 18px; }
+.hud-progress { color: var(--muted); }
+.hud-score { color: var(--gold); }
+
+/* ===== QUESTION CARD ===== */
+#q-card {
+  background: var(--card); border-radius: 14px;
+  padding: 28px 28px 24px; margin-bottom: 18px;
+}
+#q-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--btn); border-radius: 20px;
+  padding: 4px 12px; font-size: 12px; color: var(--muted);
+  margin-bottom: 16px;
+}
+#q-emoji { font-size: 28px; display: block; margin-bottom: 10px; }
+#q-text {
+  font-size: 19px; line-height: 1.65; font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* ===== ANSWER BUTTONS ===== */
+#answers { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+.ans-btn {
+  width: 100%; min-height: 56px;
+  padding: 14px 20px;
+  background: var(--btn); border: 2px solid var(--border);
+  border-radius: var(--r); color: var(--text);
+  font-size: 15px; font-weight: 500;
+  text-align: right; direction: rtl;
+  transition: all 150ms ease-out;
+  display: flex; align-items: center;
+}
+.ans-btn:hover:not(:disabled) {
+  background: var(--btn-hover); border-color: var(--accent);
+  transform: translateY(-1px);
+}
+.ans-btn:active:not(:disabled) { transform: scale(0.98); }
+.ans-btn.correct { background: #1e3d1f; border-color: var(--correct); color: #a5e6a7; }
+.ans-btn.wrong   { background: #3d1e1e; border-color: var(--wrong);   color: #f5a3a3; }
+.ans-btn:disabled { cursor: not-allowed; }
+.ans-letter {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; min-width: 28px;
+  background: var(--border); border-radius: 6px;
+  font-size: 12px; font-weight: 700;
+  margin-left: 12px; color: var(--muted);
+}
+.ans-btn.correct .ans-letter { background: var(--correct); color: #111; }
+.ans-btn.wrong   .ans-letter { background: var(--wrong);   color: #fff; }
+
+/* ===== FEEDBACK ===== */
+#feedback {
+  background: var(--card); border-radius: var(--r);
+  padding: 18px 20px; margin-bottom: 16px;
+  display: none; animation: fadeUp 0.3s ease-out;
+}
+#feedback.show { display: block; }
+#feedback-header {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 16px; font-weight: 700; margin-bottom: 10px;
+}
+#feedback-icon { font-size: 20px; }
+#feedback-text { font-size: 14px; line-height: 1.7; color: #c8c8c8; }
+#feedback.correct-fb #feedback-header { color: var(--correct); }
+#feedback.wrong-fb   #feedback-header { color: var(--wrong); }
+#feedback.correct-fb { border-right: 3px solid var(--correct); }
+#feedback.wrong-fb   { border-right: 3px solid var(--wrong); }
+
+/* ===== CONTINUE BUTTON ===== */
+#continue-btn {
+  width: 100%; padding: 15px;
+  background: var(--accent); color: #111;
+  font-size: 16px; font-weight: 700;
+  border-radius: var(--r);
+  transition: all 150ms ease-out;
+  display: none;
+}
+#continue-btn.show { display: block; animation: fadeUp 0.3s 0.4s ease-out both; }
+#continue-btn:hover { background: #5dba61; }
+
+/* ===== END SCREEN ===== */
+.end-emoji { font-size: 64px; text-align: center; margin-bottom: 16px; }
+.end-title  { font-size: 24px; font-weight: 700; text-align: center; margin-bottom: 8px; }
+.end-sub    { font-size: 15px; color: var(--muted); text-align: center; margin-bottom: 32px; }
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px; }
+.stat-card {
+  background: var(--card); border-radius: var(--r);
+  padding: 18px; text-align: center;
+}
+.stat-val { font-size: 28px; font-weight: 700; color: var(--accent); }
+.stat-lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+/* ===== STATS SCREEN ===== */
+.stats-title { font-size: 20px; font-weight: 700; margin-bottom: 20px; text-align: center; }
+.card-row {
+  background: var(--card); border-radius: var(--r);
+  padding: 14px 18px; margin-bottom: 10px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.card-q { font-size: 14px; flex: 1; padding-left: 12px; color: var(--text); }
+.card-badge {
+  font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 600;
+}
+.badge-new    { background: #2a2f3d; color: #7aadff; }
+.badge-learn  { background: #3d2a2a; color: #f5a3a3; }
+.badge-review { background: #2a3d2a; color: #a5e6a7; }
+.back-btn {
+  display: block; width: 100%; padding: 14px;
+  background: var(--btn); border: 1px solid var(--border);
+  color: var(--text); font-size: 15px; font-weight: 600;
+  border-radius: var(--r); text-align: center; margin-top: 16px;
+  cursor: pointer; transition: background 150ms;
+}
+.back-btn:hover { background: var(--btn-hover); }
+
+/* ===== SHAKE ANIMATION ===== */
+@keyframes shake {
+  0%,100%{ transform:translateX(0); }
+  20%    { transform:translateX(-8px); }
+  40%    { transform:translateX(8px); }
+  60%    { transform:translateX(-5px); }
+  80%    { transform:translateX(5px); }
+}
+.shake { animation: shake 0.35s ease-in-out; }
+
+/* ===== GLOW ===== */
+@keyframes glow {
+  0%  { box-shadow:0 0 0 0 rgba(76,175,80,0.4); }
+  50% { box-shadow:0 0 0 12px rgba(76,175,80,0); }
+}
+.glow { animation: glow 0.4s ease-out; }
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:480px) {
+  .level-grid { grid-template-columns: 1fr; }
+  #q-text { font-size: 17px; }
+  .stats-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- Progress bar -->
+<div id="top-bar"><div id="top-fill"></div></div>
+
+<!-- Floating particles -->
+<div id="particles"></div>
+
+<!-- ===================== START SCREEN ===================== -->
+<section id="screen-start" class="screen active">
+  <div class="container fade-up">
+    <div class="logo">🌱</div>
+    <h1 class="title">Soil Food Web Quiz</h1>
+    <p class="subtitle">למד על חיי האדמה, חקלאות מחדשת ורשת המזון שמתחת לרגליך</p>
+
+    <div class="level-grid">
+      <div class="level-card" data-level="beginner">
+        <div class="level-icon">🌱</div>
+        <div class="level-name">מתחיל</div>
+        <div class="level-desc">מושגי יסוד, אורגניזמים ופרקטיקות בסיסיות</div>
+      </div>
+      <div class="level-card" data-level="intermediate">
+        <div class="level-icon">🌿</div>
+        <div class="level-name">בינוני</div>
+        <div class="level-desc">מיקוריזה, מעגלי חנקן ופחמן, יחסים אקולוגיים</div>
+      </div>
+      <div class="level-card" data-level="advanced">
+        <div class="level-icon">🌳</div>
+        <div class="level-name">מתקדם</div>
+        <div class="level-desc">מנגנונים ביוכימיים, מחקרים, מערכות מורכבות</div>
+      </div>
+    </div>
+
+    <button id="start-btn" class="start-btn" disabled>בחר רמה כדי להתחיל</button>
+    <button id="review-btn" class="secondary-btn">📚 חזרה — כרטיסיות שמגיעות היום</button>
+    <button id="stats-btn" class="secondary-btn">📊 הסטטיסטיקות שלי</button>
+  </div>
+</section>
+
+<!-- ===================== QUIZ SCREEN ===================== -->
+<section id="screen-quiz" class="screen">
+  <div class="container">
+    <div id="hud">
+      <div id="hud-lives" class="hud-lives">❤️❤️❤️</div>
+      <div id="hud-progress" class="hud-progress">שאלה 1/13</div>
+      <div id="hud-score" class="hud-score">⭐ 0</div>
+    </div>
+
+    <div id="q-card" class="fade-up">
+      <div id="q-badge"><span id="q-cat-icon">🌱</span><span id="q-cat-name">נושא</span></div>
+      <span id="q-emoji">🌍</span>
+      <p id="q-text">טוען שאלה...</p>
+    </div>
+
+    <div id="answers">
+      <button class="ans-btn" data-i="0"><span class="ans-letter">א</span><span class="ans-text"></span></button>
+      <button class="ans-btn" data-i="1"><span class="ans-letter">ב</span><span class="ans-text"></span></button>
+      <button class="ans-btn" data-i="2"><span class="ans-letter">ג</span><span class="ans-text"></span></button>
+      <button class="ans-btn" data-i="3"><span class="ans-letter">ד</span><span class="ans-text"></span></button>
+    </div>
+
+    <div id="feedback">
+      <div id="feedback-header">
+        <span id="feedback-icon">✓</span>
+        <span id="feedback-title">תשובה נכונה!</span>
+      </div>
+      <p id="feedback-text"></p>
+    </div>
+
+    <button id="continue-btn">המשך ←</button>
+  </div>
+</section>
+
+<!-- ===================== END SCREEN ===================== -->
+<section id="screen-end" class="screen">
+  <div class="container fade-up">
+    <div class="end-emoji" id="end-emoji">🎉</div>
+    <h2 class="end-title" id="end-title">סיום!</h2>
+    <p class="end-sub" id="end-sub">כל הכבוד על השלמת הסבב</p>
+
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-val" id="end-score">0</div><div class="stat-lbl">נקודות</div></div>
+      <div class="stat-card"><div class="stat-val" id="end-correct">0/0</div><div class="stat-lbl">נכון</div></div>
+      <div class="stat-card"><div class="stat-val" id="end-streak">0</div><div class="stat-lbl">שיא רצף</div></div>
+      <div class="stat-card"><div class="stat-val" id="end-accuracy">0%</div><div class="stat-lbl">דיוק</div></div>
+    </div>
+
+    <button id="replay-btn" class="start-btn">🔄 שחק שוב — אותה רמה</button>
+    <button id="home-btn" class="secondary-btn" style="margin-top:10px">🏠 חזור לתפריט</button>
+  </div>
+</section>
+
+<!-- ===================== STATS SCREEN ===================== -->
+<section id="screen-stats" class="screen">
+  <div class="container fade-up">
+    <h2 class="stats-title">📊 הכרטיסיות שלי</h2>
+    <div id="stats-list"></div>
+    <button class="back-btn" id="stats-back">← חזור</button>
+  </div>
+</section>
+
+<script>
+'use strict';
+
+/* ======================================================
+   MODULE 1 — QUESTION DATA BANK (40 שאלות)
+====================================================== */
+const QUESTIONS = [
+  // ── BEGINNER (13) ──
+  {id:'b01',level:'beginner',category:'מושג',emoji:'🌍',
+   question:'מה הוא Soil Food Web (רשת המזון של האדמה)?',
+   options:['שיטה לדשן אדמה כימית','רשת של יחסי האכילה בין אורגניזמים חיים באדמה','סוג של מפה גיאולוגית','שיטת השקייה חקלאית'],
+   correct:1,
+   explanation:'Soil Food Web הוא רשת מורכבת של יחסי אכילה בין אורגניזמים החיים באדמה — מחיידקים ופטריות זעירים, דרך נמטודות וחרקים, ועד לתולעים ועכבישים. כל אורגניזם אוכל ונאכל, וכך חומרי מזון ואנרגיה זורמים דרך המערכת האקולוגית של האדמה.'},
+  {id:'b02',level:'beginner',category:'מושג',emoji:'🚜',
+   question:'מה ההבדל העיקרי בין חקלאות קונבנציונלית לחקלאות מחדשת?',
+   options:['חקלאות מחדשת משתמשת יותר בחומרי הדברה','חקלאות קונבנציונלית מתמקדת בבריאות האדמה לטווח ארוך','חקלאות מחדשת מתמקדת בשיקום האדמה ובריאות המערכת האקולוגית','אין הבדל — שתיהן מייצרות את אותן התוצאות'],
+   correct:2,
+   explanation:'חקלאות מחדשת שואפת לשקם ולהעמיק את בריאות האדמה לאורך זמן — תוך הגדלת מגוון ביולוגי, הוספת חומר אורגני, והפחתת עיבוד. חקלאות קונבנציונלית נוטה להתמקד בתפוקה מיידית, לעיתים על חשבון מבנה ובריאות האדמה.'},
+  {id:'b03',level:'beginner',category:'אורגניזם',emoji:'🦠',
+   question:'מה תפקיד החיידקים באדמה?',
+   options:['רק לגרום למחלות בצמחים','פירוק חומר אורגני ושחרור חומרי מזון לצמחים','יצירת אבנים ומינרלים','אין לחיידקים תפקיד חשוב באדמה'],
+   correct:1,
+   explanation:'חיידקים הם הפירקנים העיקריים של חומר אורגני באדמה. הם מפרקים שאריות צמחים ובעלי חיים ומשחררים חנקן, זרחן ואשלגן בצורה שצמחים יכולים לקלוט. ישנם גם חיידקים שמקבעים חנקן מהאוויר ישירות לאדמה. כפית אחת של אדמה בריאה מכילה עד מיליארד חיידקים.'},
+  {id:'b04',level:'beginner',category:'אורגניזם',emoji:'🪱',
+   question:'מה תולעת האדמה עושה לקרקע?',
+   options:['פוגעת בשורשי הצמחים','יוצרת תעלות, מאווררת ומשפרת את מבנה האדמה','אוגרת מים בתוך גופה','מייצרת רעלנים שמגינים על הצמחים'],
+   correct:1,
+   explanation:'תולעי אדמה הן "מהנדסות המערכת האקולוגית". הן יוצרות תעלות שמאווררות את האדמה ומאפשרות למים לחדור לעומק. הפרשותיהן עשירות בחיידקים וחומרי מזון. מחקרים מראים שאדמה עם תולעים פעילות מייצרת יבולים גבוהים בעד 25% יותר.'},
+  {id:'b05',level:'beginner',category:'פרקטיקה',emoji:'♻️',
+   question:'מה זה קומפוסט?',
+   options:['סוג של דשן כימי סינתטי','חומר אורגני מפורק שמשמש לשיפור האדמה','שיטה לגידול צמחים ללא אדמה','כימיקל להדברת מזיקים'],
+   correct:1,
+   explanation:'קומפוסט הוא חומר אורגני (שאריות מזון, עלים, גזם) שעבר פירוק מבוקר על ידי מיקרואורגניזמים. התוצר הסופי — חומר כהה ועשיר — משפר מבנה אדמה, מוסיף חומרי מזון, ומגביר פעילות חיים. קומפוסט הוא "מזון" עבור רשת המזון של האדמה.'},
+  {id:'b06',level:'beginner',category:'פרקטיקה',emoji:'🍂',
+   question:'מה הוא כיסוי אדמה (Mulch) ולמה הוא חשוב?',
+   options:['שכבת פלסטיק שמונעת צמיחת עשבים','שכבת חומר אורגני על פני האדמה שמגנה ומשמרת לחות','דשן נוזלי שמרססים על הצמחים','כימיקל לחיזוק שורשים'],
+   correct:1,
+   explanation:'כיסוי אדמה הוא שכבה של חומר אורגני (קש, עלים, שבבי עץ) על פני האדמה. הוא מגן מפני שחיקה, משמר לחות, מפחית גידוש קרקע, ומספק מזון לאורגניזמים שחיים בשכבה העליונה. בטבע, האדמה תמיד "לבושה" — שכבת עלים מכסה אותה כל העת.'},
+  {id:'b07',level:'beginner',category:'אורגניזם',emoji:'🍄',
+   question:'מה תפקיד הפטריות ברשת המזון של האדמה?',
+   options:['רק לגרום למחלות בצמחים','פירוק חומרים קשים (ליגנין) ויצירת קשרים בין צמחים','ספיגת אור שמש לצמחים','יצירת חמצן באדמה'],
+   correct:1,
+   explanation:'פטריות הן הפירקניות העיקריות של חומרים קשים כמו ליגנין (חומר גבעולי). הן יוצרות רשת עדינה של חוטים (hyphae) שמחברת בין צמחים שונים ומאפשרת העברת חומרים ומידע. ללא פטריות, שאריות עצים לא היו מתפרקות לחלוטין.'},
+  {id:'b08',level:'beginner',category:'פרקטיקה',emoji:'🚫',
+   question:'מדוע חקלאות ללא-עיבוד (No-till) מועדפת בחקלאות מחדשת?',
+   options:['כי היא זולה יותר בלבד','כי היא שומרת על מבנה האדמה, חיידקים ורשת פטריות','כי עיבוד גורם לבצורת','כי צמחים גדלים טוב יותר באדמה קשה'],
+   correct:1,
+   explanation:'עיבוד האדמה הורס את המבנה הפיזי שלה, הורג מיקרואורגניזמים, ושובר רשתות פטריות שנבנו במשך שנים. ללא-עיבוד מאפשר לאדמה לשמר ארכיטקטורת חיים — חוטי פטריות, מנהרות תולעים, ופסיפס אורגניזמים — שכולם תורמים לבריאות ופריון הקרקע.'},
+  {id:'b09',level:'beginner',category:'מושג',emoji:'🌿',
+   question:'מה זה ריזוספרה?',
+   options:['שכבת האוויר מעל הצמח','אזור האדמה הסמוך לשורשים שבו פעילות מיקרוביאלית גבוהה במיוחד','חלק הצמח מעל פני הקרקע','סוג של פטרייה טפילה'],
+   correct:1,
+   explanation:'הריזוספרה היא אזור האדמה הדק (כ-2-3 מ"מ) שמקיף שורשים. שורשים מפרישים שם סוכרים וחלבונים שמושכים מיליארדי חיידקים ופטריות. הריזוספרה היא אחת הסביבות הצפופות ביותר מבחינה ביולוגית על פני כדור הארץ — עד פי 100 יותר אורגניזמים מאדמה רגילה.'},
+  {id:'b10',level:'beginner',category:'מושג',emoji:'🟫',
+   question:'מה תפקיד החומר האורגני באדמה?',
+   options:['הוא רק חומר עודף שנצבר','הוא מספק מזון, שומר מים, ומשפר מבנה האדמה','הוא מזיק לצמחים ועדיף להסירו','הוא משמש רק לחיידקים'],
+   correct:1,
+   explanation:'חומר אורגני הוא לב האדמה הפורייה. הוא מספק מזון לאורגניזמים, שומר לחות (כל 1% עלייה מגדיל יכולת אחסון מים ב-~140,000 ליטר לדונם), ומשפר מבנה — יוצר "אגרגטים" שמאפשרים ניקוז ואוורור בו-זמנית.'},
+  {id:'b11',level:'beginner',category:'פרקטיקה',emoji:'🌾',
+   question:'מה זה גידול כיסוי (Cover Crop)?',
+   options:['צמח שגדל תחת ממסך לצל','גידול שנועד להגן על האדמה ולשפרה בין עונות','צמח שמכסה ירקות מהגשם','שיטה לכיסוי פירות מהשמש'],
+   correct:1,
+   explanation:'גידולי כיסוי הם צמחים שנזרעים בין עונות גידול. הם מגינים על האדמה מפני שחיקה, מוסיפים חומר אורגני, קובעים חנקן (קטניות), ומזינים את אורגניזמי האדמה. לאחר הגמר, הם "מתגלגלים" לתוך האדמה ומספקים מזון לרשת המזון.'},
+  {id:'b12',level:'beginner',category:'יחסים',emoji:'🌳',
+   question:'כיצד עצים תורמים לבריאות האדמה?',
+   options:['הם רק צורכים מים ומזון מהאדמה','שורשיהם יוצרים תעלות, ועליהם הנושרים מוסיפים חומר אורגני','הם חוסמים את הגשם ומייבשים את האדמה','עצים אינם משפיעים על האדמה'],
+   correct:1,
+   explanation:'עצים הם "מהנדסי" האדמה: שורשים עמוקים פותחים תעלות לאוויר ומים; עלים נושרים יוצרים שכבת כיסוי עשירה; שורשים מתים הופכים לחומר אורגני; ורשת המיקוריזה הנרחבת שלהם מגדילה שטח ספיגה פי אלפים.'},
+  {id:'b13',level:'beginner',category:'אורגניזם',emoji:'🔬',
+   question:'איזה אורגניזם הוא הנפוץ ביותר באדמה פוריה?',
+   options:['תולעים','חרקים','חיידקים','שורשי צמחים'],
+   correct:2,
+   explanation:'חיידקים הם הנפוצים ביותר — כפית אחת של אדמה בריאה מכילה כ-100 מיליון עד מיליארד חיידקים! גיוון ומספר החיידקים הוא אחד האינדיקטורים הטובים ביותר לבריאות האדמה.'},
+
+  // ── INTERMEDIATE (14) ──
+  {id:'m01',level:'intermediate',category:'אורגניזם',emoji:'🍄',
+   question:'מה ההבדל בין פטריות מיקוריזה ארבוסקולריות (AM) לאקטומיקוריזה (ECM)?',
+   options:['AM גדלות בתוך תאי השורש, ECM גדלות מחוץ לתאים','AM גדלות על עצים, ECM גדלות על ירקות','AM מזיקות לצמחים, ECM מועילות','אין הבדל ביניהן'],
+   correct:0,
+   explanation:'AM (arbuscular mycorrhiza) יוצרות מבנים מיוחדים בתוך תאי השורש ומקיימות קשר ישיר. נפוצות בצמחי שדה, ירקות ועשבוניים. ECM (ectomycorrhiza) גדלות מחוץ לתאים ויוצרות "מעטפת" סביב השורש. נפוצות בעצי יער ויוצרות את "Wood Wide Web".'},
+  {id:'m02',level:'intermediate',category:'תהליך',emoji:'🔄',
+   question:'מה תפקיד הנמטודות ב"שחרור" חנקן לצמחים?',
+   options:['הן קובעות חנקן מהאוויר','הן אוכלות חיידקים ומפרישות עודפי חנקן ליד השורשים','הן פוגעות בשורשים ומשחררות חנקן מהצמח','נמטודות אינן קשורות לחנקן'],
+   correct:1,
+   explanation:'נמטודות (תולעי מיקרוסקופ) אוכלות חיידקים שספגו חנקן. כאשר הנמטודה מעכלת חיידקים, עודף החנקן מופרש כאמוניה — ישר לריזוספרה, בדיוק ליד שורשי הצמח. זהו מנגנון "הלולאה המיקרוביאלית" — הצמח מקבל חנקן דרך שרשרת אכילה.'},
+  {id:'m03',level:'intermediate',category:'פרקטיקה',emoji:'⚗️',
+   question:'מה זה ביוצ\'אר (Biochar) ומה תפקידו באדמה?',
+   options:['פחם ביולוגי שמגביר חיידקים ומשמש כ"ספוג" לחומרים','חומר כימי שמחטא את האדמה','דשן אורגני שמיוצר מפרות','קרקע ממוחזרת מאתרי בנייה'],
+   correct:0,
+   explanation:'ביוצ\'אר הוא פחם ביולוגי מיוצר בשריפת ביומסה בחמצן נמוך. מבנהו הנקבובי הייחודי מספק בית לחיידקים ופטריות, שומר מים וחומרי מזון (עד פי 5 יותר), ומצמצם שחרור גזי חממה. ביוצ\'אר יכול להישאר באדמה ולתפקד במשך אלפי שנים.'},
+  {id:'m04',level:'intermediate',category:'יחסים',emoji:'🔗',
+   question:'מה הכוונה ב-"Wood Wide Web"?',
+   options:['אתר אינטרנט על עצי יער','רשת תקשורת בין עצים דרך חוטי פטריות מיקוריזה','שיטת גידול עצים בתוך מבנים','רשת של עצים שגדלים בדפוס מסוים'],
+   correct:1,
+   explanation:'ה-Wood Wide Web הוא הכינוי לרשת הפטריות (mycorrhizal network) שמחברת בין עצים ביער. דרכה, עצים מעבירים סוכרים, מינרלים ומים זה לזה — ואפילו עוזרים לעצים חולים או עצירים. אם מסמנים פחמן רדיואקטיבי בעץ אחד, ניתן לאתרו בעצים שכנים תוך שעות.'},
+  {id:'m05',level:'intermediate',category:'תהליך',emoji:'🌡️',
+   question:'מהו יחס C:N (פחמן לחנקן) ולמה הוא חשוב לקומפוסט?',
+   options:['יחס שמודד את חומציות האדמה','יחס שקובע את מהירות פירוק החומר האורגני','יחס שמודד את כמות המים באדמה','יחס בין גידולי קיץ לחורף'],
+   correct:1,
+   explanation:'יחס C:N מייצג כמה פחמן קיים לכל יחידת חנקן. קומפוסט אידיאלי מצריך יחס 25:1-30:1. חומרים "חומים" (קש, עץ) עשירים בפחמן; "ירוקים" (עלים, גזם) עשירים בחנקן. יחס גבוה מדי = פירוק איטי; נמוך מדי = ריחות רעים. איזון נכון מייצר קומפוסט תוך 3-6 שבועות.'},
+  {id:'m06',level:'intermediate',category:'אורגניזם',emoji:'🧫',
+   question:'מה תפקיד הפרוטוזואה (Protozoa) ברשת המזון?',
+   options:['הם פוגעים בצמחים בלבד','הם אוכלים חיידקים ומשחררים חומרי מזון לצמחים','הם יוצרים קומפוסט','הם קובעים חנקן מהאוויר'],
+   correct:1,
+   explanation:'פרוטוזואה (חד-תאיים) הם הרמה הבאה בשרשרת המזון מעל חיידקים. כאשר הם אוכלים חיידקים, הם "משחררים" חומרי מזון שהיו נעולים בגוף החיידק. מנגנון קריטי שמאפשר לצמחים לגשת לחנקן, זרחן ואשלגן שאחרת היו כלואים בגופי חיידקים מתים.'},
+  {id:'m07',level:'intermediate',category:'תהליך',emoji:'🌿',
+   question:'מה זה "דניטריפיקציה" ובאיזה תנאי היא מתרחשת?',
+   options:['תהליך שבו חיידקים קובעים חנקן מהאוויר','תהליך שבו חיידקים הופכים ניטראט (NO₃⁻) לגז חנקן (N₂) בהיעדר חמצן','פירוק פרוטאין לחומצות אמינו','יצירת ניטראט מאמוניה'],
+   correct:1,
+   explanation:'דניטריפיקציה היא תהליך שבו חיידקים הופכים ניטראט לגז חנקן שנפלט לאטמוספרה — כך מזון חנקני "אובד" מהמערכת. זה קורה בעיקר באדמה רוויית מים (אנאירובית). זו אחת הסיבות שחשוב לשמור על ניקוז טוב ולמנוע קומפקציה.'},
+  {id:'m08',level:'intermediate',category:'אורגניזם',emoji:'🕷️',
+   question:'מה תפקיד הארתרופודות (חרקים, עכבישאים) באדמה?',
+   options:['הם רק מזיקים לצמחים','הם מפרקים חומר גס, יוצרים תעלות, ומווסתים אוכלוסיות','הם אינם חיים באדמה','הם מייצרים דשן בלבד'],
+   correct:1,
+   explanation:'ארתרופודות כמו פצלונים, נדלים וחרקים מפרקים חומר גס (עלים, ענפים) לפיסות קטנות שיקל לפרק לאחר מכן; יוצרים תעלות שמאווררות את האדמה; וטורפים מיקרואורגניזמים — ובכך מווסתים אוכלוסיות ושומרים על מגוון ביולוגי.'},
+  {id:'m09',level:'intermediate',category:'יחסים',emoji:'🌾',
+   question:'כיצד גידולי כיסוי משפרים את מבנה האדמה?',
+   options:['הם מוסיפים מינרלים ישירות לאדמה','שורשיהם יוצרים תעלות ומוסיפים חומר אורגני לאחר פירוקם','הם שואבים מים מהאדמה ומחשלים אותה','הם אינם משפיעים על מבנה האדמה'],
+   correct:1,
+   explanation:'גידולי כיסוי פועלים על מבנה האדמה בשני אופנים: בחיים — שורשים יוצרים תעלות; ובמוות — השורשים מתפרקים ומוסיפים חומר אורגני שמדביק חלקיקי אדמה יחד ("אגרגטים"). אגרגטים בריאים = אדמה שמחזיקה מים וחמצן בו-זמנית.'},
+  {id:'m10',level:'intermediate',category:'אורגניזם',emoji:'🌱',
+   question:'מה זה ריזוביום (Rhizobium) ומה חשיבותו?',
+   options:['פטרייה שפוגעת בשורשים','חיידק שיוצר קשר סימביוטי עם קטניות וקובע חנקן','נמטודה טפילה','חרק שאוכל שורשי צמחים'],
+   correct:1,
+   explanation:'ריזוביום הוא חיידק שיוצר יחסי סימביוזה עם קטניות (אפונה, שעועית, חלבלוב). הוא חי בפקעיות מיוחדות על השורש ומסוגל לקבע חנקן מהאוויר — גז שהצמחים אינם יכולים לספוג ישירות. הצמח מספק לחיידק סוכר; החיידק מספק לצמח חנקן.'},
+  {id:'m11',level:'intermediate',category:'תהליך',emoji:'🔄',
+   question:'מה זה "מעגל הפחמן" בחקלאות מחדשת?',
+   options:['כמות CO₂ שטרקטורים פולטים','תהליך שבו פחמן מהאוויר מגיע לאדמה דרך צמחים ונשמר שם','שיטה לחישוב כמות הפחמן בדשן','מעגל של גידולי חורף וקיץ'],
+   correct:1,
+   explanation:'מעגל הפחמן: הצמח קולט CO₂ דרך פוטוסינתזה → מעביר 30-40% לשורשים → מפריש לאדמה → חיידקים ופטריות בונים ממנו חומר אורגני → שמאוחסן באדמה עשרות שנים. חקלאות מחדשת מגדילה "תפיסת פחמן" זו ויכולה להפוך שדות ממקורות CO₂ לספוגי פחמן.'},
+  {id:'m12',level:'intermediate',category:'פרקטיקה',emoji:'🌿',
+   question:'מה זה Green Manure (דשן ירוק)?',
+   options:['פרש של בקר ירוק','גידול שנחרש לתוך האדמה כשהוא עדיין ירוק להעשרתה','דשן כימי שצבוע ירוק','אצות שמשמשות כדשן'],
+   correct:1,
+   explanation:'דשן ירוק הוא גידול (לרוב קטנית עשיר חנקן) שגדל ואז נחרש לאדמה לפני הבשלתו. כאשר הצמח הטרי מתפרק, הוא משחרר חנקן, פחמן וחומרים אורגניים ישירות לאדמה. שיטה זו שימשה חקלאים לאלפי שנים לפני המצאת דשנים סינתטיים.'},
+  {id:'m13',level:'intermediate',category:'מושג',emoji:'📊',
+   question:'מה הם "שירותי המערכת האקולוגית" שאדמה בריאה מספקת?',
+   options:['רק גידול יבולים','סינון מים, אגירת פחמן, קיבוע חנקן, ומגוון ביולוגי','ייצור חמצן בלבד','אחסון מינרלים לכרייה'],
+   correct:1,
+   explanation:'אדמה בריאה מספקת: סינון מי תהום (פעילות מיקרוביאלית מנקה רעלים); אגירת פחמן (מפחיתה שינוי אקלים); קיבוע חנקן ביולוגי (מפחית צורך בדשן); ביסוס מגוון ביולוגי; ורגולציה של שיטפונות. ערכם הכלכלי של שירותים אלה מוערך בטריליוני דולרים.'},
+  {id:'m14',level:'intermediate',category:'מושג',emoji:'🧫',
+   question:'מה ההבדל בין אדמה "חיידקית" לאדמה "פטרייתית"?',
+   options:['אדמה חיידקית מסריחה, פטרייתית מסריחה פחות','אדמה חיידקית מועדפת לגידולים שנתיים, פטרייתית לעצים ושיחים','אין הבדל מבחינה חקלאית','אדמה פטרייתית פחות מזינה'],
+   correct:1,
+   explanation:'אדמות "חיידקיות" (יחס גבוה של חיידקים לפטריות) מתאימות לגידולים חד-שנתיים כמו חיטה, תירס וירקות. אדמות "פטרייתיות" מתאימות לעצים, שיחים ויערות. עיבוד האדמה הורס פטריות יותר מחיידקים — לכן שדות מעובדים הופכים חיידקיים. ללא-עיבוד עוברים עם הזמן לאדמה פטרייתית יותר.'},
+
+  // ── ADVANCED (13) ──
+  {id:'a01',level:'advanced',category:'תהליך',emoji:'🧬',
+   question:'מה זה Glomalin ולמה הוא חשוב?',
+   options:['חומר הדברה ביולוגי','גליקופרוטאין שפטריות AM מייצרות ומדביק אגרגטים','ויטמין שנמצא בשורשי צמחים','סוג של חיידק קיבוע חנקן'],
+   correct:1,
+   explanation:'גלומלין הוא גליקופרוטאין שפטריות מיקוריזה ארבוסקולריות (AM) מייצרות. הוא פועל כ"דבק" ביולוגי שמחבר חלקיקי אדמה ויוצר אגרגטים יציבים. אגרגטים טובים = אדמה עם מבנה טוב = ספיגת מים, אוורור ועמידות לשחיקה. גלומלין יכול להישאר באדמה עד 40 שנה.'},
+  {id:'a02',level:'advanced',category:'תהליך',emoji:'🌱',
+   question:'מה זה "הפרשות שורש" (Root Exudates) ומה תפקידן?',
+   options:['פסולת שהצמח מפריש כדי להיפטר ממנה','חומרים שהשורש מפריש בכוונה כדי למשוך ולהזין מיקרואורגניזמים','הורמוני גדילה שהצמח שולח לשורשים','חומרים רעילים שמגינים על הצמח'],
+   correct:1,
+   explanation:'הפרשות שורש הן תמהיל מורכב של סוכרים, חומצות אמינו וחומצות אורגניות שהצמח "מקריב" — עד 40% מהפחמן שקלט בפוטוסינתזה. זו אינה פסולת אלא "השקעה". הצמח מזמין חיידקים ופטריות ספציפיים שיספקו לו מינרלים שהוא צריך — פחמן תמורת מינרלים.'},
+  {id:'a03',level:'advanced',category:'תהליך',emoji:'🔬',
+   question:'מה קורה לרשת המזון של האדמה לאחר שימוש בגליפוסט (Glyphosate)?',
+   options:['כלום — גליפוסט פועל רק על צמחים','פוגע בחיידקים מקבעי חנקן ובפטריות מיקוריזה, ומשבש את המערכת','משפר את פעילות החיידקים','הורג רק תולעים'],
+   correct:1,
+   explanation:'גליפוסט פוגע במסלול ה-shikimate — שנמצא בחיידקים ופטריות, לא רק בצמחים. מחקרים מראים שהוא פוגע בחיידקי ריזוביום (מקבעי חנקן), מפחית קולוניזציה של מיקוריזה בשורשים, ומשנה את הרכב קהילות החיידקים. ההשפעה נמשכת חודשים עד שנים.'},
+  {id:'a04',level:'advanced',category:'מושג',emoji:'📈',
+   question:'כמה פחמן יכולה חקלאות מחדשת "לתפוס" מהאטמוספרה?',
+   options:['כמות זניחה — פחות מ-1% מהפליטות','עד 0.5-3 טון C לדונם לשנה, פוטנציאל משמעותי בסקלה גלובלית','כמות בלתי מוגבלת — פתרון מלא לשינוי אקלים','חקלאות מחדשת לא קושרת פחמן'],
+   correct:1,
+   explanation:'מחקרים מראים פוטנציאל של 0.5-3 טון C/דונם/שנה תלוי בתנאים ובפרקטיקות. בסקלה גלובלית, אם 50% מהשטח החקלאי העולמי יאמץ פרקטיקות כאלה, ניתן לאגור 1-3 גיגה-טון פחמן לשנה — כ-10-15% מהפליטות הנוכחיות.'},
+  {id:'a05',level:'advanced',category:'יחסים',emoji:'🕸️',
+   question:'מה ה"מין מפתח" (keystone species) בעל ההשפעה הגדולה ביותר ביערות?',
+   options:['תולעת האדמה','פטריות מיקוריזיות — שמחברות ומשפיעות על כל שאר המערכת','דבורי אדמה','עכברי שדה'],
+   correct:1,
+   explanation:'מיני מפתח הם אורגניזמים שהשפעתם גדולה מהצפוי לגודלם. ביערות, פטריות מיקוריזה מחברות עשרות עצים, מווסתות את זרימת הפחמן והמינרלים, ומשפיעות על הצלחת צמחים ספציפיים. הסרתן — על ידי כימיקלים — גורמת לקריסה מדורגת של שאר המערכת.'},
+  {id:'a06',level:'advanced',category:'תהליך',emoji:'🏗️',
+   question:'מה זה "אגרגציה" (soil aggregation) ולמה היא קריטית?',
+   options:['צבירת רעלנים באדמה','יצירת קבוצות של חלקיקי אדמה שמשמרות מבנה נכון עם מרווחים לאוויר ומים','אגירת מינרלים בשורשים','הצטברות מלחים באדמה'],
+   correct:1,
+   explanation:'אגרגטים הם קבוצות של חלקיקי אדמה שמחוברים יחד על ידי גלומלין, הפרשות מיקרוביאליות, וחוטי פטריות. מרווחים מאקרו מאפשרים אוויר וניקוז; מרווחים מיקרו מאגרים מים. אדמה עם אגרגציה טובה עמידה לשחיקה, מאווררת ולחה בו-זמנית.'},
+  {id:'a07',level:'advanced',category:'מושג',emoji:'🔄',
+   question:'מה ההבדל בין "Decomposers" ל-"Detritivores" באדמה?',
+   options:['אין הבדל, שניהם מפרקים חומר מת','Decomposers מפרקים כימית (חיידקים/פטריות), Detritivores אוכלים חלקיקים (תולעים/חרקים)','Detritivores גדולים יותר ולכן מפרקים מהר יותר','Decomposers פועלים רק בחמצן, Detritivores ללא חמצן'],
+   correct:1,
+   explanation:'Decomposers (חיידקים ופטריות) מפרקים כימית — מפרישים אנזימים שמשברים מולקולות. Detritivores (תולעים, פצלונים, נדלים) אוכלים חומר מת. שניהם חיוניים: Detritivores מגדילים את שטח הפנים לפעולת Decomposers על ידי ריסוק החומר לחתיכות קטנות.'},
+  {id:'a08',level:'advanced',category:'תהליך',emoji:'🧪',
+   question:'כיצד פטריות מיקוריזה מצליחות לספוג פוספט שצמחים לא יכולים?',
+   options:['הן מייצרות חומצה שמפרקת סלעי פוספט','חוטי ה-hyphae דקים מאוד וחודרים למרחקים שורשים לא מגיעים, ומייצרים אנזים phosphatase','הן שואבות פוספט ממי הגשם','הן מקבלות פוספט מחיידקים בלבד'],
+   correct:1,
+   explanation:'הפטרייה פותרת שתי בעיות: 1) חוטי ה-hyphae דקים פי 10-50 משורשים וחודרים למיקרו-מרחבים — ומגדילים שטח ספיגה עד פי 1000. 2) הם מייצרות phosphatase — אנזים שמפרק פוספט אורגני לצורה שניתן לקלוט. כ-80% מהזרחן שצמחים קולטים עובר דרך פטריות מיקוריזה.'},
+  {id:'a09',level:'advanced',category:'מושג',emoji:'📉',
+   question:'מה קורה למגוון האורגניזמים באדמה לאחר 10 שנות עיבוד רצופות?',
+   options:['הוא גדל בגלל אוורור האדמה','נשמר קבוע — האורגניזמים מסתגלים','יורד משמעותית — במיוחד פטריות, חיידקים ספציפיים ותולעים','רק תולעים נפגעות'],
+   correct:2,
+   explanation:'מחקרים מראים ירידה של 50-80% בביומסה מיקרוביאלית ו-60-70% בכמות הפטריות לאחר עיבוד רצוף. תולעי אדמה מצטמצמות ב-75-90%. הרכב קהילת החיידקים הופך פחות גוון — נשארים בעיקר מינים אופורטוניסטיים. הנזק מצטבר ובלתי הפיך ללא התערבות פעילה.'},
+  {id:'a10',level:'advanced',category:'תהליך',emoji:'🌊',
+   question:'מה זה "Succession" (עוקבות אקולוגית) באדמה?',
+   options:['תורשה גנטית בין דורות של צמחים','שינוי מדורג בהרכב קהילות האורגניזמים לאורך זמן כשהאדמה מבשילה','חלפות גידולים בין עונות','ירידה ברמת החומר האורגני עם הזמן'],
+   correct:1,
+   explanation:'כמו בצמחיה שמשתנה מחלקה בור ליער בוגר, גם קהילות האדמה עוברות עוקבות: ראשית מגיעים חיידקים פיוניריים → אחריהם פרוטוזואה ונמטודות → פטריות → ארתרופודות. כל שלב משנה את תנאי הסביבה לטובת השלב הבא. אדמה בוגרת היא אדמה פטרייתית, מורכבת ומגוונת.'},
+  {id:'a11',level:'advanced',category:'יחסים',emoji:'🌡️',
+   question:'כיצד שינוי אקלים משפיע על רשת המזון של האדמה?',
+   options:['אינו משפיע — האדמה מבודדת מהטמפרטורה','טמפרטורה גבוהה מאיצה פירוק חומר אורגני ומפחיתה אחסון פחמן','שינוי אקלים מועיל לאדמה — יותר CO₂ = יותר פוטוסינתזה','משפיע רק על הצמחים, לא על אורגניזמי האדמה'],
+   correct:1,
+   explanation:'עלייה בטמפרטורה מאיצה פעילות מפרקים (חיידקים, פטריות) שמשחררים CO₂ מחומר אורגני — "לולאת משוב חיובית" שמחמירה את ההתחממות. בנוסף, שינויים בדפוסי גשמים משפיעים על לחות האדמה שקריטית לאורגניזמים.'},
+  {id:'a12',level:'advanced',category:'תהליך',emoji:'⚗️',
+   question:'מהו מנגנון "ה-Microbial Loop" (לולאה מיקרוביאלית) בהקשר לחנקן?',
+   options:['תהליך שבו חנקן מסתובב ללא הפסקה בין חיידקים','שרשרת: שורש מפריש פחמן → חיידקים גדלים → פרוטוזואה/נמטודות אוכלים → חנקן משתחרר → נקלט בשורש','לולאה שבה חיידקים מייצרים חנקן מגז','מעגל בין חיידקי ניטריפיקציה לדניטריפיקציה'],
+   correct:1,
+   explanation:'הלולאה המיקרוביאלית: הצמח "משקיע" פחמן בהפרשות שורש → חיידקים משתמשים בפחמן ובולעים חנקן → פרוטוזואה ונמטודות אוכלות חיידקים עשירי-חנקן → מפרישות חנקן עודף → שוב ליד השורש. הצמח "קונה" חנקן בתשלום פחמן — מנגנון יעיל הרבה יותר מספיגת דשן כימי.'},
+  {id:'a13',level:'advanced',category:'מושג',emoji:'🌍',
+   question:'מה ההבדל בין "Soil Carbon" ל-"Soil Organic Matter" (SOM)?',
+   options:['זהים לחלוטין — אותו מושג','SOM מכיל את כל החומר האורגני; Soil Carbon הוא רק הפחמן שבתוכו (כ-58%)','Soil Carbon הוא רק CO₂ באדמה','SOM כולל גם מינרלים, Soil Carbon לא'],
+   correct:1,
+   explanation:'SOM (חומר אורגני של האדמה) מכיל פחמן, מימן, חמצן, חנקן ועוד. הפחמן הוא כ-58% ממשקל SOM. מדדים: 1-2% SOM = אדמה ענייה; 3-5% = בריאה; 5%+ = עשירה מאוד. שיפור של 1% SOM ב-30 ס"מ עליונים ≈ צבירה של כ-5 טון פחמן לדונם.'}
+];
+
+/* ======================================================
+   MODULE 2 — SM-2 SPACED REPETITION ENGINE
+====================================================== */
+function sm2Update(card, quality) {
+  // quality: 5=מושלם, 4=נכון עם מאמץ, 3=נכון קשה, 2=שגוי קל, 1=שגוי, 0=בלתי
+  if (quality >= 3) {
+    if (card.repetitions === 0) card.interval = 1;
+    else if (card.repetitions === 1) card.interval = 6;
+    else card.interval = Math.round(card.interval * card.easeFactor);
+    card.repetitions += 1;
+  } else {
+    card.repetitions = 0;
+    card.interval = 1;
+  }
+  card.easeFactor = Math.max(1.3, card.easeFactor + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+  const now = new Date();
+  now.setDate(now.getDate() + card.interval);
+  card.dueDate = now.toISOString();
+  card.quality = quality;
+  return card;
+}
+
+function defaultCard() {
+  return { repetitions: 0, easeFactor: 2.5, interval: 1, dueDate: new Date().toISOString(), quality: null };
+}
+
+/* ======================================================
+   MODULE 3 — LOCALSTORAGE PERSISTENCE
+====================================================== */
+const STORAGE_KEY = 'sfwQuiz_progress';
+const STATS_KEY   = 'sfwQuiz_stats';
+
+function loadProgress() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
+}
+function saveProgress(p) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
+}
+function loadStats() {
+  try { return JSON.parse(localStorage.getItem(STATS_KEY)) || { totalAnswered:0, totalCorrect:0, streak:0, bestStreak:0 }; } catch { return { totalAnswered:0, totalCorrect:0, streak:0, bestStreak:0 }; }
+}
+function saveStats(s) {
+  localStorage.setItem(STATS_KEY, JSON.stringify(s));
+}
+
+/* ======================================================
+   MODULE 4 — STATE MANAGER
+====================================================== */
+const state = {
+  screen: 'start',
+  level: null,
+  queue: [],
+  qIndex: 0,
+  lives: 3,
+  score: 0,
+  streak: 0,
+  bestStreak: 0,
+  answered: false,
+  sessionCorrect: 0,
+  sessionTotal: 0,
+  progress: {},
+  stats: {},
+};
+
+function initState(level) {
+  state.level = level;
+  state.progress = loadProgress();
+  state.stats = loadStats();
+  state.lives = 3;
+  state.score = 0;
+  state.streak = 0;
+  state.bestStreak = 0;
+  state.answered = false;
+  state.sessionCorrect = 0;
+  state.sessionTotal = 0;
+
+  // Build queue for this level — prioritise due cards, then new cards
+  const now = new Date();
+  const byLevel = QUESTIONS.filter(q => q.level === level);
+  const due   = byLevel.filter(q => { const c = state.progress[q.id]; return c && new Date(c.dueDate) <= now; });
+  const fresh = byLevel.filter(q => !state.progress[q.id]);
+  const later = byLevel.filter(q => { const c = state.progress[q.id]; return c && new Date(c.dueDate) > now; });
+
+  // Shuffle each bucket
+  const shuffle = a => a.sort(() => Math.random() - 0.5);
+  state.queue = [...shuffle(due), ...shuffle(fresh), ...shuffle(later)];
+  state.qIndex = 0;
+}
+
+/* ======================================================
+   MODULE 5 — QUIZ CONTROLLER
+====================================================== */
+function startQuiz(level) {
+  initState(level);
+  showScreen('quiz');
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = state.queue[state.qIndex];
+  if (!q || state.lives <= 0) { endSession(); return; }
+
+  state.answered = false;
+
+  // HUD
+  const livesStr = '❤️'.repeat(state.lives) + '🖤'.repeat(3 - state.lives);
+  document.getElementById('hud-lives').textContent = livesStr;
+  document.getElementById('hud-progress').textContent = `שאלה ${state.qIndex + 1}/${state.queue.length}`;
+  document.getElementById('hud-score').textContent = `⭐ ${state.score}`;
+
+  // Progress bar
+  setProgress((state.qIndex / state.queue.length) * 100);
+
+  // Card
+  const catColors = { 'מושג':'#5c7eaa', 'אורגניזם':'#6aaa5c', 'פרקטיקה':'#aa8c5c', 'יחסים':'#aa5c8c', 'תהליך':'#5caaa8' };
+  document.getElementById('q-cat-icon').textContent = catEmoji(q.category);
+  document.getElementById('q-cat-name').textContent = q.category;
+  document.getElementById('q-emoji').textContent = q.emoji;
+  document.getElementById('q-text').textContent = q.question;
+
+  // Animate card in
+  const card = document.getElementById('q-card');
+  card.classList.remove('fade-up');
+  void card.offsetWidth;
+  card.classList.add('fade-up');
+
+  // Shuffle options (keep track of correct index after shuffle)
+  const letters = ['א','ב','ג','ד'];
+  const opts = q.options.map((text,i) => ({text, origIndex:i}));
+  opts.sort(() => Math.random() - 0.5);
+
+  const btns = document.querySelectorAll('.ans-btn');
+  btns.forEach((btn, i) => {
+    btn.className = 'ans-btn';
+    btn.disabled = false;
+    btn.querySelector('.ans-letter').textContent = letters[i];
+    btn.querySelector('.ans-text').textContent = opts[i].text;
+    btn.dataset.origIndex = opts[i].origIndex;
+  });
+
+  // Hide feedback & continue
+  const fb = document.getElementById('feedback');
+  fb.className = '';
+  document.getElementById('continue-btn').className = '';
+}
+
+function catEmoji(cat) {
+  const map = { 'מושג':'💡','אורגניזם':'🦠','פרקטיקה':'🌾','יחסים':'🔗','תהליך':'⚗️' };
+  return map[cat] || '📌';
+}
+
+function handleAnswer(btn) {
+  if (state.answered) return;
+  state.answered = true;
+
+  const q = state.queue[state.qIndex];
+  const chosen = parseInt(btn.dataset.origIndex);
+  const isCorrect = (chosen === q.correct);
+
+  // Disable all buttons, highlight
+  const btns = document.querySelectorAll('.ans-btn');
+  btns.forEach(b => {
+    b.disabled = true;
+    const oi = parseInt(b.dataset.origIndex);
+    if (oi === q.correct) b.classList.add('correct');
+    else if (oi === chosen && !isCorrect) b.classList.add('wrong');
+  });
+
+  // Animations
+  if (isCorrect) {
+    btn.classList.add('glow');
+  } else {
+    document.getElementById('q-card').classList.add('shake');
+    setTimeout(() => document.getElementById('q-card').classList.remove('shake'), 400);
+  }
+
+  // Score & lives
+  if (isCorrect) {
+    state.streak++;
+    state.bestStreak = Math.max(state.bestStreak, state.streak);
+    const bonus = state.streak >= 3 ? 20 : 10;
+    state.score += bonus;
+    state.sessionCorrect++;
+  } else {
+    state.lives--;
+    state.streak = 0;
+  }
+  state.sessionTotal++;
+
+  // Update HUD immediately
+  document.getElementById('hud-lives').textContent = '❤️'.repeat(state.lives) + '🖤'.repeat(3 - state.lives);
+  document.getElementById('hud-score').textContent = `⭐ ${state.score}`;
+
+  // SM-2 update
+  const quality = isCorrect ? (state.streak >= 3 ? 5 : 4) : 1;
+  if (!state.progress[q.id]) state.progress[q.id] = defaultCard();
+  state.progress[q.id] = sm2Update(state.progress[q.id], quality);
+  saveProgress(state.progress);
+
+  // Feedback
+  const fb = document.getElementById('feedback');
+  document.getElementById('feedback-icon').textContent = isCorrect ? '✓' : '✗';
+  document.getElementById('feedback-title').textContent = isCorrect ? 'תשובה נכונה!' : 'לא נכון';
+  document.getElementById('feedback-text').textContent = q.explanation;
+  fb.className = `show ${isCorrect ? 'correct-fb' : 'wrong-fb'}`;
+
+  // Continue button
+  setTimeout(() => {
+    document.getElementById('continue-btn').className = 'show';
+  }, 400);
+}
+
+function nextQuestion() {
+  if (state.lives <= 0) { endSession(); return; }
+  state.qIndex++;
+  if (state.qIndex >= state.queue.length) { endSession(); return; }
+  renderQuestion();
+}
+
+function endSession() {
+  // Update global stats
+  state.stats.totalAnswered = (state.stats.totalAnswered || 0) + state.sessionTotal;
+  state.stats.totalCorrect  = (state.stats.totalCorrect  || 0) + state.sessionCorrect;
+  state.stats.bestStreak    = Math.max(state.stats.bestStreak || 0, state.bestStreak);
+  state.stats.lastPlayed    = new Date().toISOString();
+  saveStats(state.stats);
+
+  setProgress(100);
+
+  // Populate end screen
+  const pct = state.sessionTotal > 0 ? Math.round((state.sessionCorrect / state.sessionTotal) * 100) : 0;
+  const emoji = pct >= 80 ? '🎉' : pct >= 50 ? '👍' : '💪';
+  const title = pct >= 80 ? 'כל הכבוד!' : pct >= 50 ? 'טוב מאוד!' : 'המשך להתאמן!';
+  const sub   = `ענית על ${state.sessionTotal} שאלות ברמת ${levelLabel(state.level)}`;
+
+  document.getElementById('end-emoji').textContent = emoji;
+  document.getElementById('end-title').textContent = title;
+  document.getElementById('end-sub').textContent = sub;
+  document.getElementById('end-score').textContent = state.score;
+  document.getElementById('end-correct').textContent = `${state.sessionCorrect}/${state.sessionTotal}`;
+  document.getElementById('end-streak').textContent = state.bestStreak;
+  document.getElementById('end-accuracy').textContent = `${pct}%`;
+
+  showScreen('end');
+}
+
+function levelLabel(l) {
+  return { beginner:'מתחיל', intermediate:'בינוני', advanced:'מתקדם' }[l] || l;
+}
+
+/* ======================================================
+   MODULE 6 — REVIEW (due cards)
+====================================================== */
+function showReview() {
+  const progress = loadProgress();
+  const now = new Date();
+  const list = document.getElementById('stats-list');
+  list.innerHTML = '';
+
+  QUESTIONS.forEach(q => {
+    const c = progress[q.id];
+    const row = document.createElement('div');
+    row.className = 'card-row';
+
+    let badgeClass, badgeText;
+    if (!c) {
+      badgeClass = 'badge-new'; badgeText = 'חדש';
+    } else if (new Date(c.dueDate) <= now) {
+      badgeClass = 'badge-learn'; badgeText = 'לחזרה';
+    } else {
+      badgeClass = 'badge-review'; badgeText = 'נלמד ✓';
+    }
+
+    row.innerHTML = `
+      <div class="card-q">${q.emoji} ${q.question.substring(0,60)}${q.question.length>60?'...':''}</div>
+      <span class="card-badge ${badgeClass}">${badgeText}</span>`;
+    list.appendChild(row);
+  });
+
+  showScreen('stats');
+}
+
+/* ======================================================
+   MODULE 7 — UI / SCREEN MANAGEMENT
+====================================================== */
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  state.screen = name;
+}
+
+function setProgress(pct) {
+  document.getElementById('top-fill').style.width = pct + '%';
+}
+
+/* ======================================================
+   MODULE 8 — PARTICLES
+====================================================== */
+function initParticles() {
+  const container = document.getElementById('particles');
+  const colors = ['#4CAF50','#8B6F47','#5d9c42','#c9a84c','#3a6e3a'];
+  const COUNT = 18;
+  for (let i = 0; i < COUNT; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = Math.random() * 6 + 3;
+    p.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${Math.random()*100}%;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      animation-duration:${Math.random()*18+12}s;
+      animation-delay:${Math.random()*12}s;
+    `;
+    container.appendChild(p);
+  }
+}
+
+/* ======================================================
+   MODULE 9 — EVENT LISTENERS & INIT
+====================================================== */
+document.addEventListener('DOMContentLoaded', () => {
+  initParticles();
+
+  // Level selection
+  document.querySelectorAll('.level-card').forEach(card => {
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.level-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      state.level = card.dataset.level;
+      const btn = document.getElementById('start-btn');
+      btn.disabled = false;
+      btn.textContent = `התחל — ${levelLabel(state.level)} 🚀`;
+    });
+  });
+
+  // Start button
+  document.getElementById('start-btn').addEventListener('click', () => {
+    if (state.level) startQuiz(state.level);
+  });
+
+  // Review button
+  document.getElementById('review-btn').addEventListener('click', showReview);
+
+  // Stats button
+  document.getElementById('stats-btn').addEventListener('click', showReview);
+
+  // Answer buttons
+  document.querySelectorAll('.ans-btn').forEach(btn => {
+    btn.addEventListener('click', () => handleAnswer(btn));
+  });
+
+  // Continue button
+  document.getElementById('continue-btn').addEventListener('click', nextQuestion);
+
+  // End screen buttons
+  document.getElementById('replay-btn').addEventListener('click', () => startQuiz(state.level));
+  document.getElementById('home-btn').addEventListener('click', () => {
+    setProgress(0);
+    showScreen('start');
+  });
+
+  // Stats back
+  document.getElementById('stats-back').addEventListener('click', () => showScreen('start'));
+});
+</script>
+</body>
+</html>
